@@ -79,7 +79,7 @@ func main() {
 		log.Fatal(err)
 	}
 	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
-	listener, err := net.Listen("tcp", "localhost:"+"443")
+	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", localport))
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
