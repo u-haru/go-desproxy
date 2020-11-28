@@ -25,31 +25,20 @@ func HandleRequest(clientConn net.Conn) {
 	if proxyConn, err := net.Dial("tcp", proxyHost); err != nil {
 		log.Fatal(err)
 	} else {
-		url, err := url.Parse("http://" + remoteHost)
-		if err != nil {
-			log.Fatal(err)
+		var proxyauth = ""
+		if !strings.Contains(remoteHost,"maizuru") {
+			proxyauth = fmt.Sprintf("Proxy-Authorization: %s",proxyAuthorization) + "\r\n"
 		}
-		addr, err := net.ResolveIPAddr("ip4", url.Hostname())
-		if err != nil {
-			log.Fatal(err)
-		}
-		req, err := http.NewRequest("CONNECT", "https://"+remoteHost, nil)
-		if err != nil {
-			log.Fatal(err)
-		}
-		req.Host = fmt.Sprintf("%s", addr.String()+":"+url.Port())
-		req.Header.Set("Proxy-Authorization", proxyAuthorization)
-		req.Write(proxyConn)
-		loop := true
-		br := bufio.NewReader(proxyConn)
-		for loop {
-			b, err := br.ReadByte()
-			if b == '\n' {
-				loop = false
-			}
-			if err != nil {
-				log.Fatal(err)
-			}
+		var request = fmt.Sprintf("CONNECT %s HTTP/1.0\r\n%s\r\n",remoteHost,proxyauth)
+		proxyConn.Write([]byte(request))
+		
+		scanner := bufio.NewScanner(proxyConn)
+		scanner.Scan()
+		var response = scanner.Text()
+		if !strings.Contains(response,"200") {
+			fmt.Println("err: "+response)
+			proxyConn.Close()
+			clientConn.Close()
 		}
 		go func() {
 			io.Copy(clientConn, proxyConn)
