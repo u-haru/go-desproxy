@@ -77,7 +77,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer listener.Close()
-	fmt.Println("Listening on localhost:")
+	fmt.Println("Listening on", localHost)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
