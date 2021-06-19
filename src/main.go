@@ -15,28 +15,29 @@ import (
 )
 
 var (
-	localport          = 8080
+	localHost          = "localhost:8080"
 	proxyHost          = ""
-	remoteHost         = ""
+	proxyUser          = ""
 	proxyAuthorization = ""
+	remoteHost         = ""
 )
 
 func HandleRequest(clientConn net.Conn) {
 	if proxyConn, err := net.Dial("tcp", proxyHost); err != nil {
 		log.Fatal(err)
 	} else {
-		var proxyauth = ""
-		if !strings.Contains(remoteHost,"maizuru") {
-			proxyauth = fmt.Sprintf("Proxy-Authorization: %s",proxyAuthorization) + "\r\n"
+		proxyauth := ""
+		if proxyAuthorization != "" {
+			proxyauth = fmt.Sprintf("Proxy-Authorization: %s", proxyAuthorization) + "\r\n"
 		}
-		var request = fmt.Sprintf("CONNECT %s HTTP/1.0\r\n%s\r\n",remoteHost,proxyauth)
+		request := fmt.Sprintf("CONNECT %s HTTP/1.0\r\n%s\r\n", remoteHost, proxyauth)
 		proxyConn.Write([]byte(request))
-		
+
 		scanner := bufio.NewScanner(proxyConn)
 		scanner.Scan()
-		var response = scanner.Text()
-		if !strings.Contains(response,"200") {
-			fmt.Println("err: "+response)
+		response := scanner.Text()
+		if !strings.Contains(response, "200") {
+			fmt.Println("err: " + response)
 			proxyConn.Close()
 			clientConn.Close()
 		}
@@ -52,23 +53,25 @@ func HandleRequest(clientConn net.Conn) {
 }
 
 func main() {
-	_proxyUser := flag.String("u", "", "username:password")
-	_localport := flag.Int("p", 8080, "local port")
-	_remoteHost := flag.String("r", "", "remote host:port")
-	_proxyHost := flag.String("x", "10.1.16.8:8080", "Proxy:port")
+	flag.StringVar(&proxyUser, "u", "", "username:password")
+	flag.StringVar(&localHost, "p", "localhost:8080", "Proxy:port")
+	flag.StringVar(&remoteHost, "r", "", "remote host:port")
+	flag.StringVar(&proxyHost, "x", "10.1.16.8:8080", "Proxy:port")
 	flag.Parse()
-	localport = *_localport
-	remoteHost = *_remoteHost
-	proxyHost = *_proxyHost
 
-	proxyAuthorization = "Basic " + base64.StdEncoding.EncodeToString([]byte(*_proxyUser))
-	proxyUrlString := fmt.Sprintf("http://%s@%s", strings.Replace(url.QueryEscape(*_proxyUser), "%3A", ":", 1), proxyHost)
+	proxyUrlString := ""
+	if proxyUser != "" {
+		proxyAuthorization = "Basic " + base64.StdEncoding.EncodeToString([]byte(proxyUser))
+		proxyUrlString = fmt.Sprintf("http://%s@%s", strings.Replace(url.QueryEscape(proxyUser), "%3A", ":", 1), proxyHost)
+	} else {
+		proxyUrlString = fmt.Sprintf("http://%s", proxyHost)
+	}
 	proxyUrl, err := url.Parse(proxyUrlString)
 	if err != nil {
 		log.Fatal(err)
 	}
 	http.DefaultTransport = &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
-	listener, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", localport))
+	listener, err := net.Listen("tcp", localHost)
 	if err != nil {
 		fmt.Println("Error listening:", err.Error())
 		os.Exit(1)
