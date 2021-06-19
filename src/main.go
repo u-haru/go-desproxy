@@ -62,7 +62,7 @@ func main() {
 	proxyUrlString := ""
 	if proxyUser != "" {
 		proxyAuthorization = "Basic " + base64.StdEncoding.EncodeToString([]byte(proxyUser))
-		proxyUrlString = fmt.Sprintf("http://%s@%s", strings.Replace(url.QueryEscape(proxyUser), "%3A", ":", 1), proxyHost)
+		proxyUrlString = fmt.Sprintf("http://%s@%s", proxyUser, proxyHost)
 	} else {
 		proxyUrlString = fmt.Sprintf("http://%s", proxyHost)
 	}
